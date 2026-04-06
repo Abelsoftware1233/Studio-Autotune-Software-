@@ -1,0 +1,70 @@
+:root {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --accent-color: #38bdf8;
+    --record-red: #ef4444;
+    --text-color: #f8fafc;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.studio-container {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 400px;
+    text-align: center;
+}
+
+.ai-text { color: var(--accent-color); font-weight: bold; }
+
+.control-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; opacity: 0.8; }
+
+input[type="range"] { width: 100%; cursor: pointer; }
+
+.action-buttons { display: flex; gap: 10px; justify-content: center; }
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.record-off { background: var(--accent-color); color: white; }
+.record-on { background: var(--record-red); color: white; animation: pulse 1.5s infinite; }
+
+button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.visualizer {
+    margin-top: 20px;
+    height: 10px;
+    background: #334155;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#meter-bar { height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s; }
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
