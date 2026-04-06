@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -144,7 +144,7 @@
         <header>
             <div class="ai-badge">● AI Engine Synced</div>
             <h1>Abelsoftware123 <span class="ai-text">AI</span> Studio</h1>
-            <p>De toekomst van jouw stem.</p>
+            <p>The future of your voice.</p>
         </header>
 
         <div class="visualizer-container">
@@ -152,7 +152,7 @@
         </div>
 
         <div class="control-group">
-            <label>1. MUZIEK (BEAT SELECTEREN)</label>
+            <label>1. MUSIC (SELECT BEAT)</label>
             <input type="file" id="beat-upload" accept="audio/*">
         </div>
 
@@ -172,9 +172,9 @@
         </div>
 
         <div class="action-buttons">
-            <button id="btn-record" class="main-btn record-ready">Opname Starten</button>
-            <button id="btn-stop" class="main-btn" style="background: #475569; color: white; display: none;">Stop & Mix Masteren</button>
-            <button id="btn-save" class="main-btn save-btn">Download Jouw Track ⬇️</button>
+            <button id="btn-record" class="main-btn record-ready">Start Recording</button>
+            <button id="btn-stop" class="main-btn" style="background: #475569; color: white; display: none;">Stop & Master Mix</button>
+            <button id="btn-save" class="main-btn save-btn">Download Your Track ⬇️</button>
         </div>
     </div>
 
@@ -207,10 +207,10 @@
             limiter = new Tone.Limiter(-1).toDestination();
             masterBus.connect(limiter);
 
-            // Stem Keten
+            // Vocal Chain
             mic.chain(pitchShift, equalizer, compressor, reverb, meter, masterBus);
 
-            // Recorder Setup (neemt alles van de masterBus op)
+            // Recorder Setup (records everything from the masterBus)
             const dest = Tone.context.createMediaStreamDestination();
             masterBus.connect(dest);
             recorder = new MediaRecorder(dest.stream);
@@ -255,19 +255,19 @@
         document.getElementById('f-smooth').onclick = function() {
             if(!equalizer) return;
             activeFilters.smooth = !activeFilters.smooth;
-            // Smoothing verlaagt scherpe tonen en maakt pitch vloeiender
+            // Smoothing lowers sharp tones and makes pitch more fluid
             equalizer.high.value = activeFilters.smooth ? -6 : 0;
             this.classList.toggle('active-filter');
         };
 
-        // Opname Logica
+        // Recording Logic
         btnRecord.onclick = async () => {
             if (!mic) await startEngine();
             chunks = [];
             try {
                 await mic.open();
                 
-                // AUTO-SYNC: Beat en recorder exact tegelijk starten
+                // AUTO-SYNC: Start beat and recorder exactly at the same time
                 if (beat && beat.loaded) {
                     beat.connect(masterBus);
                     beat.start();
@@ -279,7 +279,7 @@
                 btnStop.classList.add('record-active');
                 btnSave.style.display = 'none';
             } catch (err) {
-                alert("Geen microfoon gevonden. Controleer je instellingen.");
+                alert("Microphone not found. Please check your settings.");
             }
         };
 
@@ -289,7 +289,7 @@
             mic.close();
             btnStop.style.display = 'none';
             btnRecord.style.display = 'block';
-            btnRecord.innerText = "Nieuwe Sessie";
+            btnRecord.innerText = "New Session";
         };
 
         btnSave.onclick = () => {
@@ -297,7 +297,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'EchoAI_Master_Track.wav';
+            a.download = 'Abelsoftware123_AI_Track.wav';
             a.click();
         };
 
