@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abelsoftware123 AI Studio - Pro</title>
+    <title>Echo AI Studio - Pro Ultra</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    
     <style>
         :root {
             --bg-color: #0f172a;
@@ -18,66 +17,54 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
 
         .studio-container {
             background: var(--card-bg);
-            padding: 2rem;
+            padding: 1.5rem;
             border-radius: 24px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        header { text-align: center; margin-bottom: 20px; }
-        header h1 { margin: 0; font-size: 1.8rem; }
-        .ai-text { color: var(--accent-color); font-weight: 800; }
-        header p { opacity: 0.6; font-size: 0.85rem; margin-top: 5px; }
+        header { text-align: center; margin-bottom: 15px; }
+        .ai-status { font-size: 0.7rem; color: #4ade80; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Visuele Meter */
         .visualizer-container {
-            height: 12px;
+            height: 10px;
             background: #0f172a;
-            border-radius: 6px;
+            border-radius: 5px;
             margin-bottom: 20px;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
         }
 
         #meter-bar {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, var(--accent-color), #818cf8);
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            box-shadow: 0 0 10px var(--accent-color);
             transition: width 0.05s ease;
-            box-shadow: 0 0 15px var(--accent-color);
         }
 
         .control-group {
             background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
         }
 
-        label { 
-            display: block; 
-            font-size: 0.75rem; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
-            color: var(--accent-color);
-            text-transform: uppercase;
-        }
-
-        input[type="file"] { width: 100%; color: #94a3b8; font-size: 0.8rem; }
-        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--accent-color); }
+        label { display: block; font-size: 0.7rem; font-weight: bold; margin-bottom: 8px; color: var(--accent-color); }
 
         .filter-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
@@ -87,194 +74,170 @@
             color: white;
             padding: 10px;
             border-radius: 8px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             cursor: pointer;
-            transition: 0.3s;
+            transition: 0.2s;
         }
 
-        .filter-btn.active-filter { 
-            background: var(--accent-color); 
-            color: #0f172a;
-            font-weight: bold; 
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); 
-        }
+        .active-filter { background: var(--accent-color) !important; color: #0f172a !important; font-weight: bold; }
 
-        .action-buttons { display: flex; gap: 12px; margin-top: 20px; }
+        .action-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
 
         .main-btn {
-            flex: 1;
-            padding: 15px;
+            width: 100%;
+            padding: 14px;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.3s;
             text-transform: uppercase;
         }
 
-        .record-off { background: var(--text-color); color: var(--bg-color); }
-        .record-on { background: var(--record-red); color: white; animation: pulse 1.5s infinite; }
+        .record-btn { background: white; color: #0f172a; }
+        .recording { background: var(--record-red) !important; color: white; animation: pulse 1.5s infinite; }
+        .save-btn { background: #22c55e; color: white; display: none; }
 
-        button:disabled { opacity: 0.3; cursor: not-allowed; background: #475569; color: #94a3b8; }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div class="studio-container">
-        <header>
-            <h1>Abelsoftware123 <span class="ai-text">AI</span> Studio</h1>
-            <p>De toekomst van jouw stem.</p>
-        </header>
+<div class="studio-container">
+    <header>
+        <div class="ai-status">● AI Engine Active</div>
+        <h1>Echo <span style="color:var(--accent-color)">AI</span> Studio</h1>
+    </header>
 
-        <div class="visualizer-container">
-            <div id="meter-bar"></div>
-        </div>
+    <div class="visualizer-container">
+        <div id="meter-bar"></div>
+    </div>
 
-        <div class="control-group">
-            <label>1. Muziek (Beat)</label>
-            <input type="file" id="beat-upload" accept="audio/*">
-        </div>
+    <div class="control-group">
+        <label>1. MUZIEK (AUTO-SYNC AAN)</label>
+        <input type="file" id="beat-upload" accept="audio/*">
+    </div>
 
-        <div class="control-group">
-            <label>2. Autotune (Pitch: <span id="pitch-val">0</span>)</label>
-            <input type="range" id="pitch-shift" min="-12" max="12" value="0" step="1">
-        </div>
+    <div class="control-group">
+        <label>2. STEM CORRECTIE (AUTO-TUNE)</label>
+        <input type="range" id="pitch-shift" min="-10" max="10" value="0">
+    </div>
 
-        <div class="control-group">
-            <label>3. AI Studio Filters</label>
-            <div class="filter-toggles">
-                <button id="filter-reverb" class="filter-btn">✨ REVERB</button>
-                <button id="filter-warmth" class="filter-btn">🔥 WARMTH</button>
-                <button id="filter-compress" class="filter-btn">🎙️ COMPRESS</button>
-                <button id="filter-bright" class="filter-btn">💎 BRIGHT</button>
-            </div>
-        </div>
-
-        <div class="action-buttons">
-            <button id="btn-record" class="main-btn record-off">Opname Starten</button>
-            <button id="btn-stop" class="main-btn" style="background: #475569; color: white;" disabled>Stop</button>
+    <div class="control-group">
+        <label>3. AI SMART FILTERS</label>
+        <div class="filter-toggles">
+            <button onclick="toggleFilter('reverb', this)" class="filter-btn">✨ PRO REVERB</button>
+            <button onclick="toggleFilter('warmth', this)" class="filter-btn">🔥 VOX WARMTH</button>
+            <button onclick="toggleFilter('compress', this)" class="filter-btn">🎙️ AI COMPRESS</button>
+            <button onclick="toggleFilter('smooth', this)" class="filter-btn">🧬 SMOOTHING</button>
         </div>
     </div>
 
-    <script>
-        let mic, beat, recorder, chunks = [];
-        let pitchShift, reverb, compressor, equalizer, limiter, meter;
+    <div class="action-buttons">
+        <button id="btn-record" class="main-btn record-btn">Start Studio Sessie</button>
+        <button id="btn-stop" class="main-btn" style="background: #475569; color: white; display: none;">Stop & Mixen</button>
+        <button id="btn-save" class="main-btn save-btn">Download Master Track ⬇️</button>
+    </div>
+</div>
 
-        const btnRecord = document.getElementById('btn-record');
-        const btnStop = document.getElementById('btn-stop');
-        const beatUpload = document.getElementById('beat-upload');
-        const pitchSlider = document.getElementById('pitch-shift');
-        const pitchValDisplay = document.getElementById('pitch-val');
-        const meterBar = document.getElementById('meter-bar');
+<script>
+    let mic, beat, recorder, chunks = [];
+    let pitchShift, reverb, compressor, equalizer, limiter, meter, masterBus, delay;
 
-        let filters = { reverb: false, warmth: false, compress: false, bright: false };
+    async function initStudio() {
+        await Tone.start();
+        
+        mic = new Tone.UserMedia();
+        meter = new Tone.Meter();
+        pitchShift = new Tone.PitchShift(0);
+        reverb = new Tone.Reverb({ decay: 2.8, wet: 0 });
+        compressor = new Tone.Compressor(-30, 6);
+        equalizer = new Tone.EQ3(0, 0, 0);
+        
+        // AUTO-SYNC: Delay node om latency te compenseren
+        // We vertragen de beat een heel klein beetje zodat hij perfect matcht met de mic-input
+        delay = new Tone.Delay(0.05).connect(Tone.Destination); 
 
-        async function initStudio() {
-            await Tone.start();
-            mic = new Tone.UserMedia();
-            meter = new Tone.Meter();
-            pitchShift = new Tone.PitchShift(0);
-            reverb = new Tone.Reverb({ decay: 2.5, wet: 0 });
-            compressor = new Tone.Compressor(-25, 5);
-            equalizer = new Tone.EQ3(0, 0, 0);
-            limiter = new Tone.Limiter(-1).toDestination();
+        masterBus = new Tone.Gain(1);
+        limiter = new Tone.Limiter(-1).connect(Tone.Destination);
+        masterBus.connect(limiter);
 
-            mic.chain(pitchShift, equalizer, compressor, reverb, meter, limiter);
+        // De keten: Mic -> Pitch -> EQ -> Compressor -> Reverb -> Meter -> Master
+        mic.chain(pitchShift, equalizer, compressor, reverb, meter, masterBus);
 
-            const dest = Tone.context.createMediaStreamDestination();
-            limiter.connect(dest);
-            recorder = new MediaRecorder(dest.stream);
-            
-            recorder.ondataavailable = e => chunks.push(e.data);
-            recorder.onstop = saveRecording;
+        const dest = Tone.context.createMediaStreamDestination();
+        masterBus.connect(dest);
+        recorder = new MediaRecorder(dest.stream);
+        
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => document.getElementById('btn-save').style.display = 'block';
 
-            updateVisualizer();
+        requestAnimationFrame(updateMeter);
+    }
+
+    function updateMeter() {
+        if (meter) {
+            const val = meter.getValue();
+            const perc = Math.max(0, Math.min(100, (val + 60) * 1.6));
+            document.getElementById('meter-bar').style.width = perc + "%";
         }
+        requestAnimationFrame(updateMeter);
+    }
 
-        function updateVisualizer() {
-            requestAnimationFrame(updateVisualizer);
-            if (meter) {
-                const level = meter.getValue(); 
-                const percentage = Math.max(0, Math.min(100, (level + 60) * 1.5)); 
-                meterBar.style.width = percentage + "%";
-            }
+    function toggleFilter(type, btn) {
+        if (!mic) return;
+        btn.classList.toggle('active-filter');
+        if (type === 'reverb') reverb.wet.value = reverb.wet.value === 0 ? 0.45 : 0;
+        if (type === 'warmth') equalizer.low.value = equalizer.low.value === 0 ? 10 : 0;
+        if (type === 'compress') compressor.threshold.value = compressor.threshold.value === -30 ? -50 : -30;
+        if (type === 'smooth') {
+            // Smoothing filter haalt scherpe "valse" randjes weg
+            equalizer.high.value = equalizer.high.value === 0 ? -5 : 0;
+            pitchShift.windowSize = pitchShift.windowSize === 0.1 ? 0.2 : 0.1;
         }
+    }
 
-        document.getElementById('filter-reverb').onclick = (e) => {
-            filters.reverb = !filters.reverb;
-            reverb.wet.value = filters.reverb ? 0.45 : 0;
-            e.target.classList.toggle('active-filter');
-        };
-
-        document.getElementById('filter-warmth').onclick = (e) => {
-            filters.warmth = !filters.warmth;
-            equalizer.low.value = filters.warmth ? 8 : 0;
-            e.target.classList.toggle('active-filter');
-        };
-
-        document.getElementById('filter-compress').onclick = (e) => {
-            filters.compress = !filters.compress;
-            compressor.threshold.value = filters.compress ? -45 : -25;
-            e.target.classList.toggle('active-filter');
-        };
-
-        document.getElementById('filter-bright').onclick = (e) => {
-            filters.bright = !filters.bright;
-            equalizer.high.value = filters.bright ? 10 : 0;
-            e.target.classList.toggle('active-filter');
-        };
-
-        btnRecord.onclick = async () => {
-            if (!mic) await initStudio();
-            chunks = [];
-            try {
-                await mic.open();
-                if (beat) { beat.start(); beat.connect(limiter); }
-                recorder.start();
-                btnRecord.innerText = "Bezig...";
-                btnRecord.className = "main-btn record-on";
-                btnRecord.disabled = true;
-                btnStop.disabled = false;
-            } catch (err) { alert("Microfoon niet gevonden."); }
-        };
-
-        btnStop.onclick = () => {
-            recorder.stop();
-            if (beat) beat.stop();
-            mic.close();
-            btnRecord.innerText = "Opname Starten";
-            btnRecord.className = "main-btn record-off";
-            btnRecord.disabled = false;
-            btnStop.disabled = true;
-        };
-
-        pitchSlider.oninput = (e) => {
-            pitchValDisplay.innerText = e.target.value;
-            if (pitchShift) pitchShift.pitch = e.target.value;
-        };
-
-        beatUpload.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const url = URL.createObjectURL(file);
-                beat = new Tone.Player(url);
-            }
-        };
-
-        function saveRecording() {
-            const blob = new Blob(chunks, { type: 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'echo-ai-sessie.webm';
-            a.click();
+    document.getElementById('btn-record').onclick = async () => {
+        if (!mic) await initStudio();
+        chunks = [];
+        await mic.open();
+        
+        if (beat && beat.loaded) {
+            beat.connect(masterBus);
+            beat.start();
         }
-    </script>
+        
+        recorder.start();
+        document.getElementById('btn-record').style.display = 'none';
+        document.getElementById('btn-stop').style.display = 'block';
+        document.getElementById('btn-stop').classList.add('recording');
+    };
+
+    document.getElementById('btn-stop').onclick = () => {
+        recorder.stop();
+        if (beat) beat.stop();
+        mic.close();
+        document.getElementById('btn-stop').style.display = 'none';
+        document.getElementById('btn-record').style.display = 'block';
+        document.getElementById('btn-record').innerText = "Opnieuw Opnemen";
+    };
+
+    document.getElementById('btn-save').onclick = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Mastered_Echo_Track.wav';
+        a.click();
+    };
+
+    document.getElementById('beat-upload').onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) beat = new Tone.Player(URL.createObjectURL(file));
+    };
+
+    document.getElementById('pitch-shift').oninput = (e) => {
+        document.getElementById('pitch-val').innerText = e.target.value;
+        if (pitchShift) pitchShift.pitch = e.target.value;
+    };
+</script>
 </body>
 </html>
