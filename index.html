@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo AI - Studio</title>
+    <link rel="stylesheet" href="stijl.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+    <div class="studio-container">
+        <header>
+            <h1>Echo <span class="ai-text">AI</span> Studio</h1>
+            <p>Neem op, voeg beats toe en perfectioneer je stem.</p>
+        </header>
+
+        <main>
+            <section class="controls">
+                <div class="control-group">
+                    <label>Stap 1: Kies je Beat</label>
+                    <input type="file" id="beat-upload" accept="audio/*">
+                </div>
+
+                <div class="control-group">
+                    <label>Stap 2: Autotune Kracht</label>
+                    <input type="range" id="pitch-shift" min="-12" max="12" value="0">
+                    <span id="pitch-val">0</span>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="btn-record" class="record-off">Start Opname</button>
+                    <button id="btn-stop" disabled>Stop & Sla Op</button>
+                </div>
+            </section>
+
+            <section class="visualizer">
+                <div id="meter-bar"></div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
