@@ -179,6 +179,7 @@
     </div>
 
     <script>
+        // GLOBALE VARIABELEN
         let mic, beat, recorder, chunks = [];
         let pitchShift, reverb, compressor, equalizer, limiter, meter, masterBus;
 
@@ -191,26 +192,32 @@
 
         let activeFilters = { reverb: false, warmth: false, compress: false, smooth: false };
 
+        /**
+         * START AUDIO ENGINE
+         */
         async function startEngine() {
             await Tone.start();
+            console.log("Audio Engine Started");
             
-            // Audio Nodes
             mic = new Tone.UserMedia();
             meter = new Tone.Meter();
             pitchShift = new Tone.PitchShift(0);
+            
+            // Reverb moet gegenereerd worden
             reverb = new Tone.Reverb({ decay: 2.5, wet: 0 });
+            await reverb.generate(); 
+            
             compressor = new Tone.Compressor(-25, 4);
             equalizer = new Tone.EQ3(0, 0, 0);
             
-            // Master Mix Bus
             masterBus = new Tone.Gain(1);
             limiter = new Tone.Limiter(-1).toDestination();
             masterBus.connect(limiter);
 
-            // Vocal Chain
+            // De Audio Chain: Mic -> Effecten -> Master
             mic.chain(pitchShift, equalizer, compressor, reverb, meter, masterBus);
 
-            // Recorder Setup (records everything from the masterBus)
+            // Recorder setup
             const dest = Tone.context.createMediaStreamDestination();
             masterBus.connect(dest);
             recorder = new MediaRecorder(dest.stream);
@@ -221,6 +228,9 @@
             updateMeter();
         }
 
+        /**
+         * VISUELE METER
+         */
         function updateMeter() {
             requestAnimationFrame(updateMeter);
             if (meter) {
@@ -230,68 +240,75 @@
             }
         }
 
-        // Filter Click Handlers
-        document.getElementById('f-reverb').onclick = function() {
-            if(!reverb) return;
-            activeFilters.reverb = !activeFilters.reverb;
-            reverb.wet.value = activeFilters.reverb ? 0.45 : 0;
-            this.classList.toggle('active-filter');
-        };
+        /**
+         * FILTER LOGICA
+         */
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.onclick = async function() {
+                if (!mic) await startEngine();
+                this.classList.toggle('active-filter');
+                const id = this.id;
 
-        document.getElementById('f-warmth').onclick = function() {
-            if(!equalizer) return;
-            activeFilters.warmth = !activeFilters.warmth;
-            equalizer.low.value = activeFilters.warmth ? 9 : 0;
-            this.classList.toggle('active-filter');
-        };
+                if(id === 'f-reverb') {
+                    activeFilters.reverb = !activeFilters.reverb;
+                    reverb.wet.rampTo(activeFilters.reverb ? 0.45 : 0, 0.5);
+                }
+                if(id === 'f-warmth') {
+                    activeFilters.warmth = !activeFilters.warmth;
+                    equalizer.low.value = activeFilters.warmth ? 9 : 0;
+                }
+                if(id === 'f-compress') {
+                    activeFilters.compress = !activeFilters.compress;
+                    compressor.threshold.value = activeFilters.compress ? -45 : -25;
+                }
+                if(id === 'f-smooth') {
+                    activeFilters.smooth = !activeFilters.smooth;
+                    equalizer.high.value = activeFilters.smooth ? -6 : 0;
+                }
+            };
+        });
 
-        document.getElementById('f-compress').onclick = function() {
-            if(!compressor) return;
-            activeFilters.compress = !activeFilters.compress;
-            compressor.threshold.value = activeFilters.compress ? -45 : -25;
-            this.classList.toggle('active-filter');
-        };
-
-        document.getElementById('f-smooth').onclick = function() {
-            if(!equalizer) return;
-            activeFilters.smooth = !activeFilters.smooth;
-            // Smoothing lowers sharp tones and makes pitch more fluid
-            equalizer.high.value = activeFilters.smooth ? -6 : 0;
-            this.classList.toggle('active-filter');
-        };
-
-        // Recording Logic
+        /**
+         * RECORDING LOGICA
+         */
         btnRecord.onclick = async () => {
             if (!mic) await startEngine();
             chunks = [];
             try {
+                // Browser vraagt hier om toestemming voor microfoon
                 await mic.open();
                 
-                // AUTO-SYNC: Start beat and recorder exactly at the same time
-                if (beat && beat.loaded) {
-                    beat.connect(masterBus);
-                    beat.start();
-                }
-                
-                recorder.start();
-                btnRecord.style.display = 'none';
-                btnStop.style.display = 'block';
-                btnStop.classList.add('record-active');
-                btnSave.style.display = 'none';
+                setTimeout(() => {
+                    if (beat && beat.loaded) {
+                        beat.connect(masterBus);
+                        beat.start();
+                    }
+                    recorder.start();
+                    btnRecord.style.display = 'none';
+                    btnStop.style.display = 'block';
+                    btnStop.classList.add('record-active');
+                    btnSave.style.display = 'none';
+                    console.log("Recording...");
+                }, 200);
             } catch (err) {
-                alert("Microphone not found. Please check your settings.");
+                console.error(err);
+                alert("Microfoon niet gevonden. Controleer de browser-instellingen (slotje in de URL-balk).");
             }
         };
 
         btnStop.onclick = () => {
-            recorder.stop();
+            if(recorder && recorder.state !== "inactive") recorder.stop();
             if (beat) beat.stop();
-            mic.close();
+            if (mic) mic.close();
+            
             btnStop.style.display = 'none';
             btnRecord.style.display = 'block';
             btnRecord.innerText = "New Session";
         };
 
+        /**
+         * SAVE / DOWNLOAD
+         */
         btnSave.onclick = () => {
             const blob = new Blob(chunks, { type: 'audio/wav' });
             const url = URL.createObjectURL(blob);
@@ -299,12 +316,21 @@
             a.href = url;
             a.download = 'Abelsoftware123_AI_Track.wav';
             a.click();
+            window.URL.revokeObjectURL(url);
         };
 
-        // Inputs
+        /**
+         * INPUTS (BEAT & PITCH)
+         */
         beatUpload.onchange = (e) => {
             const file = e.target.files[0];
-            if (file) beat = new Tone.Player(URL.createObjectURL(file));
+            if (file) {
+                // Oude beat opruimen indien aanwezig
+                if(beat) beat.dispose();
+                beat = new Tone.Player(URL.createObjectURL(file), () => {
+                    console.log("Beat loaded and ready.");
+                });
+            }
         };
 
         pitchSlider.oninput = (e) => {
