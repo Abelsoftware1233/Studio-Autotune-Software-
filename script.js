@@ -27,8 +27,25 @@ let activeFilters = {
 };
 
 /**
+ * 0. AUTO-REQUEST PERMISSIONS
+ * Vraagt direct bij het laden van de pagina om microfoontoegang.
+ * Dit helpt Android/WebView om de systeem-popup te triggeren.
+ */
+window.onload = () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                console.log("Systeem-toegang verleend.");
+                stream.getTracks().forEach(track => track.stop()); // Stop de stream direct om batterij te sparen
+            })
+            .catch(err => {
+                console.warn("Wacht op handmatige activatie: ", err);
+            });
+    }
+};
+
+/**
  * 1. INITIALISEER AUDIO ENGINE
- * Wordt aangeroepen bij de eerste klik om browser-beperkingen te omzeilen.
  */
 async function initStudio() {
     try {
@@ -41,18 +58,15 @@ async function initStudio() {
         meter = new Tone.Meter();
         
         // --- EFFECTEN CONFIGURATIE ---
-        // PitchShift voor Autotune effect
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.1;
 
-        // Reverb voor ruimte-effect
         reverb = new Tone.Reverb({ 
             decay: 2.5, 
             preDelay: 0.01,
             wet: 0 
         }).generate();
 
-        // Compressor voor een krachtige stem
         compressor = new Tone.Compressor({
             threshold: -25,
             ratio: 4,
@@ -60,7 +74,6 @@ async function initStudio() {
             release: 0.25
         });
 
-        // EQ voor Warmth en Smoothing
         equalizer = new Tone.EQ3({
             low: 0,
             mid: 0,
@@ -73,11 +86,9 @@ async function initStudio() {
         masterBus.connect(limiter);
 
         // --- DE AUDIO KETEN ---
-        // Mic -> Pitch -> EQ -> Compressor -> Reverb -> Meter -> Master
         mic.chain(pitchShift, equalizer, compressor, reverb, meter, masterBus);
 
         // --- RECORDING SETUP ---
-        // We maken een stream van de Master Bus (Stem + Beat)
         const dest = Tone.context.createMediaStreamDestination();
         masterBus.connect(dest);
         
@@ -92,29 +103,25 @@ async function initStudio() {
             console.log("Opname opgeslagen in buffer.");
         };
 
-        // Start visuele feedback
         updateVisualizer();
         return true;
 
     } catch (err) {
         console.error("Studio Init Fout:", err);
-        alert("Kan de audio engine niet starten. Controleer je microfoonrechten.");
         return false;
     }
 }
 
 /**
- * 2. VISUALIZER LOGICA (Volume Meter)
+ * 2. VISUALIZER LOGICA
  */
 function updateVisualizer() {
     requestAnimationFrame(updateVisualizer);
     if (meter && meterBar) {
         const level = meter.getValue();
-        // Zet decibels om naar een bruikbaar percentage voor de CSS bar
         const percentage = Math.max(0, Math.min(100, (level + 60) * 1.6));
         meterBar.style.width = percentage + "%";
         
-        // Kleurverandering bij clipping
         if (level > -3) {
             meterBar.style.backgroundColor = "#ff4d4d";
         } else {
@@ -125,12 +132,10 @@ function updateVisualizer() {
 
 /**
  * 3. AI FILTER LOGICA
- * Gebruikt via onclick in de HTML
  */
 function toggleFilter(type, btn) {
     if (!mic) {
-        console.warn("Start eerst de opname om filters te activeren.");
-        return;
+        initStudio();
     }
     
     btn.classList.toggle('active-filter');
@@ -150,34 +155,31 @@ function toggleFilter(type, btn) {
             break;
         case 'smooth':
             activeFilters.smooth = !activeFilters.smooth;
-            // High-cut filter voor een zachte sound
             equalizer.high.rampTo(activeFilters.smooth ? -10 : 0, 0.5);
             pitchShift.windowSize = activeFilters.smooth ? 0.2 : 0.1;
             break;
     }
 }
 
-// Global scope maken voor HTML onclick
 window.toggleFilter = toggleFilter;
 
 /**
  * 4. RECORDING CONTROLS
  */
 btnRecord.onclick = async () => {
-    // Initialiseer als dat nog niet gedaan is
     if (!mic) {
         const success = await initStudio();
-        if (!success) return;
+        if (!success) {
+            alert("Zorg dat je de app toestemming geeft voor de microfoon in de Android instellingen.");
+            return;
+        }
     }
     
     chunks = [];
     
     try {
-        // Open de microfoon stream
         await mic.open();
         
-        // AUTO-SYNC START
-        // We gebruiken een kleine delay om te zorgen dat de microfoon 'wakker' is
         setTimeout(() => {
             if (beat && beat.loaded) {
                 beat.start();
@@ -186,7 +188,6 @@ btnRecord.onclick = async () => {
             recorder.start();
             isRecording = true;
             
-            // UI Update
             btnRecord.style.display = 'none';
             btnStop.style.display = 'block';
             btnStop.classList.add('record-active');
@@ -196,7 +197,7 @@ btnRecord.onclick = async () => {
         }, 150);
         
     } catch (err) {
-        alert("Microfoon niet gevonden of toegang geweigerd. Check het slotje in de adresbalk.");
+        alert("Kan de microfoon niet activeren. Controleer de app-machtigingen op je telefoon.");
     }
 };
 
@@ -204,20 +205,13 @@ btnStop.onclick = () => {
     if (recorder && recorder.state === "recording") {
         recorder.stop();
     }
-    
-    if (beat) {
-        beat.stop();
-    }
-    
-    if (mic) {
-        mic.close();
-    }
+    if (beat) beat.stop();
+    if (mic) mic.close();
     
     isRecording = false;
     btnStop.style.display = 'none';
     btnRecord.style.display = 'block';
     btnRecord.innerText = "Nieuwe Sessie";
-    console.log("Opname gestopt.");
 };
 
 /**
@@ -241,14 +235,12 @@ if (beatUpload) {
         const file = e.target.files[0];
         if (file) {
             const url = URL.createObjectURL(file);
-            
-            // Verwijder oude beat als die bestaat
             if (beat) beat.dispose();
             
             beat = new Tone.Player(url, () => {
-                beat.connect(masterBus); // Koppel direct aan master
-                console.log("Beat succesvol geladen.");
-                alert("Beat klaar voor opname!");
+                beat.connect(masterBus);
+                console.log("Beat geladen.");
+                alert("Beat klaar!");
             });
         }
     };
@@ -259,25 +251,15 @@ if (beatUpload) {
  */
 if (btnSave) {
     btnSave.onclick = () => {
-        if (chunks.length === 0) {
-            alert("Geen opname gevonden.");
-            return;
-        }
+        if (chunks.length === 0) return;
         
         const blob = new Blob(chunks, { type: 'audio/wav' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        
-        // Bestandsnaam met tijdstempel
         const timestamp = new Date().toLocaleTimeString().replace(/:/g, '-');
         a.href = url;
         a.download = `EchoAI_Track_${timestamp}.wav`;
         a.click();
-        
-        // Geheugen opruimen
         window.URL.revokeObjectURL(url);
     };
 }
-
-// --- DEBUGGING HULP ---
-console.log("Echo AI Script Geladen. Wacht op gebruiker interactie...");
