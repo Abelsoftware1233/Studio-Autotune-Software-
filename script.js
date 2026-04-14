@@ -1,8 +1,24 @@
 /**
- * ECHO AI - MASTER STUDIO SCRIPT v2.0
+ * ECHO AI - MASTER STUDIO SCRIPT v2.1
  * Functies: Autotune, AI Filters, Auto-Sync & Recording
- * Ontwikkeld voor: abelsoftware123 AI Studio
+ * Ontwikkeld voor: abelsoftware123 AI Studio (APK Native Fix)
  */
+
+// --- 0. NATIVE PERMISSION TRIGGER ---
+// Dit triggert direct de Android systeem-popup bij het openen van de app
+window.onload = () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                console.log("Microfoontoegang verleend door systeem.");
+                // Stop de stream direct om de microfoon vrij te geven voor Tone.js later
+                stream.getTracks().forEach(track => track.stop()); 
+            })
+            .catch(err => {
+                console.warn("Systeempermissie geweigerd of handmatige actie nodig:", err);
+            });
+    }
+};
 
 // --- GLOBALE VARIABELEN ---
 let mic, beat, recorder, chunks = [];
@@ -24,24 +40,6 @@ let activeFilters = {
     warmth: false, 
     compress: false, 
     smooth: false 
-};
-
-/**
- * 0. AUTO-REQUEST PERMISSIONS
- * Vraagt direct bij het laden van de pagina om microfoontoegang.
- * Dit helpt Android/WebView om de systeem-popup te triggeren.
- */
-window.onload = () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                console.log("Systeem-toegang verleend.");
-                stream.getTracks().forEach(track => track.stop()); // Stop de stream direct om batterij te sparen
-            })
-            .catch(err => {
-                console.warn("Wacht op handmatige activatie: ", err);
-            });
-    }
 };
 
 /**
@@ -113,7 +111,7 @@ async function initStudio() {
 }
 
 /**
- * 2. VISUALIZER LOGICA
+ * 2. VISUALIZER LOGICA (Volume Meter)
  */
 function updateVisualizer() {
     requestAnimationFrame(updateVisualizer);
@@ -161,6 +159,7 @@ function toggleFilter(type, btn) {
     }
 }
 
+// Global scope voor HTML buttons
 window.toggleFilter = toggleFilter;
 
 /**
@@ -170,7 +169,7 @@ btnRecord.onclick = async () => {
     if (!mic) {
         const success = await initStudio();
         if (!success) {
-            alert("Zorg dat je de app toestemming geeft voor de microfoon in de Android instellingen.");
+            alert("Toestemming geweigerd. Ga naar je Android Instellingen > Apps > Echo AI en zet de Microfoon aan.");
             return;
         }
     }
@@ -197,7 +196,7 @@ btnRecord.onclick = async () => {
         }, 150);
         
     } catch (err) {
-        alert("Kan de microfoon niet activeren. Controleer de app-machtigingen op je telefoon.");
+        alert("Kan de microfoon niet openen. Controleer je app-rechten.");
     }
 };
 
@@ -240,7 +239,7 @@ if (beatUpload) {
             beat = new Tone.Player(url, () => {
                 beat.connect(masterBus);
                 console.log("Beat geladen.");
-                alert("Beat klaar!");
+                alert("Beat klaar voor de studio!");
             });
         }
     };
@@ -251,15 +250,20 @@ if (beatUpload) {
  */
 if (btnSave) {
     btnSave.onclick = () => {
-        if (chunks.length === 0) return;
+        if (chunks.length === 0) {
+            alert("Geen opname gevonden.");
+            return;
+        }
         
         const blob = new Blob(chunks, { type: 'audio/wav' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         const timestamp = new Date().toLocaleTimeString().replace(/:/g, '-');
+        
         a.href = url;
         a.download = `EchoAI_Track_${timestamp}.wav`;
         a.click();
+        
         window.URL.revokeObjectURL(url);
     };
 }
