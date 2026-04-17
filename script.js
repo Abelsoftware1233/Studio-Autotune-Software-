@@ -1,21 +1,18 @@
 /**
- * ECHO AI - MASTER STUDIO SCRIPT v2.1
- * Functies: Autotune, AI Filters, Auto-Sync & Recording
- * Ontwikkeld voor: abelsoftware123 AI Studio (APK Native Fix)
+ * ECHO AI - MASTER STUDIO SCRIPT v2.3
+ * Functies: Autotune, AI Filters, Auto-Sync & Recording + Download Fix
  */
 
 // --- 0. NATIVE PERMISSION TRIGGER ---
-// Dit triggert direct de Android systeem-popup bij het openen van de app
 window.onload = () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
-                console.log("Microfoontoegang verleend door systeem.");
-                // Stop de stream direct om de microfoon vrij te geven voor Tone.js later
+                console.log("Microfoontoegang verleend.");
                 stream.getTracks().forEach(track => track.stop()); 
             })
             .catch(err => {
-                console.warn("Systeempermissie geweigerd of handmatige actie nodig:", err);
+                console.warn("Systeempermissie nodig:", err);
             });
     }
 };
@@ -34,59 +31,32 @@ const pitchSlider = document.getElementById('pitch-shift');
 const pitchValDisplay = document.getElementById('pitch-val');
 const meterBar = document.getElementById('meter-bar');
 
-// Filter Status
-let activeFilters = { 
-    reverb: false, 
-    warmth: false, 
-    compress: false, 
-    smooth: false 
-};
+let activeFilters = { reverb: false, warmth: false, compress: false, smooth: false };
 
 /**
  * 1. INITIALISEER AUDIO ENGINE
  */
 async function initStudio() {
     try {
-        // Start de Tone.js Audio Context
         await Tone.start();
-        console.log("AI Audio Engine Gekoppeld");
-
-        // --- BRONNEN & ANALYSE ---
         mic = new Tone.UserMedia();
         meter = new Tone.Meter();
         
-        // --- EFFECTEN CONFIGURATIE ---
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.1;
 
-        reverb = new Tone.Reverb({ 
-            decay: 2.5, 
-            preDelay: 0.01,
-            wet: 0 
-        }).generate();
+        reverb = new Tone.Reverb({ decay: 2.5, preDelay: 0.01, wet: 0 });
+        await reverb.generate(); 
 
-        compressor = new Tone.Compressor({
-            threshold: -25,
-            ratio: 4,
-            attack: 0.003,
-            release: 0.25
-        });
-
-        equalizer = new Tone.EQ3({
-            low: 0,
-            mid: 0,
-            high: 0
-        });
+        compressor = new Tone.Compressor({ threshold: -25, ratio: 4, attack: 0.003, release: 0.25 });
+        equalizer = new Tone.EQ3({ low: 0, mid: 0, high: 0 });
         
-        // --- MASTER BUS & VEILIGHEID ---
         masterBus = new Tone.Gain(1);
         limiter = new Tone.Limiter(-1).toDestination();
         masterBus.connect(limiter);
 
-        // --- DE AUDIO KETEN ---
         mic.chain(pitchShift, equalizer, compressor, reverb, meter, masterBus);
 
-        // --- RECORDING SETUP ---
         const dest = Tone.context.createMediaStreamDestination();
         masterBus.connect(dest);
         
@@ -97,21 +67,23 @@ async function initStudio() {
         };
         
         recorder.onstop = () => {
-            if (btnSave) btnSave.style.display = 'block';
-            console.log("Opname opgeslagen in buffer.");
+            if (btnSave) {
+                btnSave.style.display = 'block';
+                btnSave.classList.add('ready-to-save');
+            }
+            console.log("Opname klaar voor download.");
         };
 
         updateVisualizer();
         return true;
-
     } catch (err) {
-        console.error("Studio Init Fout:", err);
+        console.error("Init Fout:", err);
         return false;
     }
 }
 
 /**
- * 2. VISUALIZER LOGICA (Volume Meter)
+ * 2. VISUALIZER
  */
 function updateVisualizer() {
     requestAnimationFrame(updateVisualizer);
@@ -119,23 +91,15 @@ function updateVisualizer() {
         const level = meter.getValue();
         const percentage = Math.max(0, Math.min(100, (level + 60) * 1.6));
         meterBar.style.width = percentage + "%";
-        
-        if (level > -3) {
-            meterBar.style.backgroundColor = "#ff4d4d";
-        } else {
-            meterBar.style.backgroundColor = "#00d2ff";
-        }
+        meterBar.style.backgroundColor = level > -3 ? "#ff4d4d" : "#00d2ff";
     }
 }
 
 /**
  * 3. AI FILTER LOGICA
  */
-function toggleFilter(type, btn) {
-    if (!mic) {
-        initStudio();
-    }
-    
+window.toggleFilter = function(type, btn) {
+    if (!mic) initStudio();
     btn.classList.toggle('active-filter');
     
     switch(type) {
@@ -154,59 +118,40 @@ function toggleFilter(type, btn) {
         case 'smooth':
             activeFilters.smooth = !activeFilters.smooth;
             equalizer.high.rampTo(activeFilters.smooth ? -10 : 0, 0.5);
-            pitchShift.windowSize = activeFilters.smooth ? 0.2 : 0.1;
             break;
     }
-}
-
-// Global scope voor HTML buttons
-window.toggleFilter = toggleFilter;
+};
 
 /**
  * 4. RECORDING CONTROLS
  */
 btnRecord.onclick = async () => {
-    if (!mic) {
-        const success = await initStudio();
-        if (!success) {
-            alert("Toestemming geweigerd. Ga naar je Android Instellingen > Apps > Echo AI en zet de Microfoon aan.");
-            return;
-        }
+    const success = await initStudio();
+    if (!success) {
+        alert("Toegang geweigerd. Check Android instellingen.");
+        return;
     }
     
     chunks = [];
-    
     try {
         await mic.open();
-        
         setTimeout(() => {
-            if (beat && beat.loaded) {
-                beat.start();
-            }
-            
+            if (beat && beat.loaded) beat.start();
             recorder.start();
             isRecording = true;
-            
             btnRecord.style.display = 'none';
             btnStop.style.display = 'block';
-            btnStop.classList.add('record-active');
             if (btnSave) btnSave.style.display = 'none';
-            
-            console.log("Opname gestart...");
-        }, 150);
-        
+        }, 200);
     } catch (err) {
-        alert("Kan de microfoon niet openen. Controleer je app-rechten.");
+        alert("Microfoon fout.");
     }
 };
 
 btnStop.onclick = () => {
-    if (recorder && recorder.state === "recording") {
-        recorder.stop();
-    }
+    if (recorder && recorder.state === "recording") recorder.stop();
     if (beat) beat.stop();
     if (mic) mic.close();
-    
     isRecording = false;
     btnStop.style.display = 'none';
     btnRecord.style.display = 'block';
@@ -214,20 +159,18 @@ btnStop.onclick = () => {
 };
 
 /**
- * 5. AUTOTUNE / PITCH SLIDER
+ * 5. AUTOTUNE / PITCH
  */
 if (pitchSlider) {
     pitchSlider.oninput = (e) => {
         const val = parseFloat(e.target.value);
         if (pitchValDisplay) pitchValDisplay.innerText = val;
-        if (pitchShift) {
-            pitchShift.pitch = val;
-        }
+        if (pitchShift) pitchShift.pitch = val;
     };
 }
 
 /**
- * 6. BEAT UPLOADEN
+ * 6. BEAT UPLOAD
  */
 if (beatUpload) {
     beatUpload.onchange = (e) => {
@@ -235,18 +178,16 @@ if (beatUpload) {
         if (file) {
             const url = URL.createObjectURL(file);
             if (beat) beat.dispose();
-            
             beat = new Tone.Player(url, () => {
                 beat.connect(masterBus);
-                console.log("Beat geladen.");
-                alert("Beat klaar voor de studio!");
-            });
+                alert("Beat geladen!");
+            }).toDestination();
         }
     };
 }
 
 /**
- * 7. DOWNLOAD / SAVE
+ * 7. DOWNLOAD / SAVE FUNCTIE (COMPLEET)
  */
 if (btnSave) {
     btnSave.onclick = () => {
@@ -255,15 +196,24 @@ if (btnSave) {
             return;
         }
         
+        // Maak van de stukjes data één audiobestand
         const blob = new Blob(chunks, { type: 'audio/wav' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const timestamp = new Date().toLocaleTimeString().replace(/:/g, '-');
         
-        a.href = url;
-        a.download = `EchoAI_Track_${timestamp}.wav`;
-        a.click();
+        // Maak een onzichtbare download-link aan
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         
+        link.href = url;
+        link.download = `EchoAI_Studio_Track_${timestamp}.wav`;
+        
+        // Voeg toe aan document, klik erop, en verwijder weer
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Geef geheugen weer vrij
         window.URL.revokeObjectURL(url);
+        console.log("Bestand gedownload.");
     };
 }
