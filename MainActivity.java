@@ -21,34 +21,30 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 1. Controleer of de app toestemming heeft voor de microfoon
+        // Controleer systeemrechten
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1);
         }
 
-        myWebView = (WebView) findViewById(R.id.webview); // Zorg dat de ID in je layout 'webview' is
+        myWebView = (WebView) findViewById(R.id.webview);
         WebSettings webSettings = myWebView.getSettings();
-        webSettings.setJavaScriptEnabled(true); // Belangrijk voor je studio
+        webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
 
         myWebView.setWebViewClient(new WebViewClient());
 
-        // 2. DIT IS DE KEY: Geef de website toestemming voor de hardware
+        // De oplossing voor de hardware-blokkade
         myWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        request.grant(request.getResources());
-                    }
+                MainActivity.this.runOnUiThread(() -> {
+                    request.grant(request.getResources());
                 });
             }
         });
 
-        // Laad je studio URL
         myWebView.loadUrl("https://abelsoftware1233.github.io");
     }
 }
