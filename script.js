@@ -1,11 +1,28 @@
 /**
- * Abelsoftware123 AI Studio - Complete Logic
+ * Abelsoftware123 AI Studio - Master Script
+ * Full Version: Autotune, Filters, Recording & Android Fix
  */
 
+// --- 1. GLOBALE VARIABELEN ---
 let mic, beat, recorder, chunks = [];
 let pitchShift, reverb, compressor, equalizer, limiter, meter, masterBus, beatBus;
+let analyser, dataArray;
 
-// 1. Koppel alle HTML elementen
+let activeFilters = {
+    autotune: true,
+    reverb: false,
+    warmth: false,
+    compress: false,
+    smooth: false
+};
+
+// C-Majeur Toonladder Frequenties (Hz)
+const targetScale = [
+    130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94,
+    261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88
+];
+
+// --- 2. HTML ELEMENTEN ---
 const btnRecord = document.getElementById('btn-record');
 const btnStop = document.getElementById('btn-stop');
 const btnSave = document.getElementById('btn-save');
@@ -14,35 +31,30 @@ const pitchSlider = document.getElementById('pitch-shift');
 const meterBar = document.getElementById('meter-bar');
 const pitchValDisplay = document.getElementById('pitch-val');
 
-let activeFilters = { reverb: false, warmth: false, compress: false, smooth: false };
-
-/**
- * 2. DE AUDIO ENGINE OPBOUWEN
- */
+// --- 3. AUDIO ENGINE ---
 async function startEngine() {
     await Tone.start();
     Tone.context.latencyHint = "fastest";
     
-    // Nodes aanmaken
     mic = new Tone.UserMedia();
     meter = new Tone.Meter();
-    pitchShift = new Tone.PitchShift(0); // Onze Autotune motor
+    pitchShift = new Tone.PitchShift(0);
     reverb = new Tone.Reverb({ decay: 2.5, wet: 0 });
     compressor = new Tone.Compressor({ threshold: -25, ratio: 4 });
     equalizer = new Tone.EQ3(0, 0, 0);
     
-    // Master routing
+    analyser = Tone.context.createAnalyser();
+    analyser.fftSize = 2048;
+    dataArray = new Float32Array(analyser.fftSize);
+
     masterBus = new Tone.Gain(1);
     limiter = new Tone.Limiter(-1).toDestination();
     masterBus.connect(limiter);
+    beatBus = new Tone.Gain(0.8).connect(masterBus);
 
-    beatBus = new Tone.Gain(0.8);
-    beatBus.connect(masterBus);
+    // KETTING: Mic -> Pitch -> EQ -> Comp -> Reverb -> Analyser -> Master
+    mic.chain(pitchShift, equalizer, compressor, reverb, meter, analyser, masterBus);
 
-    // Stem Ketting: Mic -> Pitch -> EQ -> Comp -> Reverb -> Meter -> Master
-    mic.chain(pitchShift, equalizer, compressor, reverb, meter, masterBus);
-
-    // Recorder instellen
     const dest = Tone.context.createMediaStreamDestination();
     masterBus.connect(dest);
     recorder = new MediaRecorder(dest.stream);
@@ -51,74 +63,90 @@ async function startEngine() {
     recorder.onstop = () => { btnSave.style.display = 'block'; };
 
     updateMeter();
+    runAutotune(); // Start de automatische correctie
 }
 
-/**
- * 3. DE OPNAME LOGICA (DE FIX)
- */
+// --- 4. AUTOTUNE LOGICA (AUTOMATISCH) ---
+function runAutotune() {
+    if (!analyser || !activeFilters.autotune) {
+        requestAnimationFrame(runAutotune);
+        return;
+    }
+
+    analyser.getFloatTimeDomainData(dataArray);
+    let freq = autoCorrelate(dataArray, Tone.context.sampleRate);
+
+    if (freq !== -1 && freq > 80 && freq < 1000) {
+        let closestNote = targetScale.reduce((prev, curr) => 
+            Math.abs(curr - freq) < Math.abs(prev - freq) ? curr : prev
+        );
+
+        // Bereken verschil in halve tonen
+        let diff = 12 * Math.log2(closestNote / freq);
+        
+        // Pas pitch aan (met een kleine smoothing factor)
+        pitchShift.pitch = Tone.interpolate(pitchShift.pitch, diff, 0.5);
+    }
+    
+    requestAnimationFrame(runAutotune);
+}
+
+// --- 5. WISKUNDE (PITCH DETECTION) ---
+function autoCorrelate(buffer, sampleRate) {
+    let SIZE = buffer.length;
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
+    if (Math.sqrt(rms / SIZE) < 0.01) return -1;
+
+    let c = new Float32Array(SIZE);
+    for (let i = 0; i < SIZE; i++) {
+        for (let j = 0; j < SIZE - i; j++) c[i] = c[i] + buffer[j] * buffer[j + i];
+    }
+
+    let d = 0; while (c[d] > c[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < SIZE; i++) {
+        if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    }
+    return sampleRate / maxpos;
+}
+
+// --- 6. CONTROLS & EVENTS ---
 btnRecord.onclick = async () => {
     try {
-        // Stap A: Altijd eerst Tone.js activeren
         await Tone.start();
-        
-        // Stap B: Engine starten als dat nog niet gedaan is
         if (!mic) await startEngine();
-
-        // Stap C: Microfoon openen en wachten op hardware
         await mic.open();
         
-        // Stap D: Start alles na een korte pauze (voorkomt NotReadableError)
         setTimeout(() => {
             chunks = [];
-            const now = Tone.now() + 0.1;
-
-            if (beat && beat.loaded) {
-                beat.connect(beatBus);
-                beat.start(now);
-            }
-            
+            if (beat && beat.loaded) beat.start(Tone.now() + 0.1);
             if (recorder && recorder.state === "inactive") {
                 recorder.start();
-                
-                // UI Bijwerken
                 btnRecord.style.display = 'none';
                 btnStop.style.display = 'block';
                 btnStop.classList.add('record-active');
-                btnSave.style.display = 'none';
             }
-        }, 300); // 300ms is veilig voor de meeste Android toestellen
-        
-    } catch (err) {
-        console.error("Studio Fout:", err);
-        alert("Fout: Kon de microfoon niet starten. Controleer of de app rechten heeft.");
-    }
+        }, 300);
+    } catch (err) { alert("Microfoon fout: " + err.message); }
 };
 
-/**
- * 4. STOPPEN EN OPSLAAN
- */
 btnStop.onclick = () => {
-    if (recorder && recorder.state === "recording") recorder.stop();
+    if (recorder?.state === "recording") recorder.stop();
     if (beat) beat.stop();
     if (mic) mic.close();
-    
     btnStop.style.display = 'none';
     btnRecord.style.display = 'block';
-    btnRecord.innerText = "New Session";
 };
 
 btnSave.onclick = () => {
     const blob = new Blob(chunks, { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = `AbelAI_Studio_${Date.now()}.wav`;
     a.click();
 };
 
-/**
- * 5. HULPFUNCTIES (Visualizer & Input)
- */
 function updateMeter() {
     requestAnimationFrame(updateMeter);
     if (meter) {
@@ -128,28 +156,14 @@ function updateMeter() {
     }
 }
 
-// Handmatige Pitch Slider (Autotune effect)
-pitchSlider.oninput = (e) => {
-    const val = e.target.value;
-    if (pitchValDisplay) pitchValDisplay.innerText = val;
-    if (pitchShift) pitchShift.pitch = val;
-};
-
-// Beat uploaden
-beatUpload.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        if (beat) beat.dispose();
-        beat = new Tone.Player(URL.createObjectURL(file), () => {
-            console.log("Beat geladen!");
-        });
-    }
-};
-
-// Filter Logica
+// Filter knoppen
 document.getElementById('f-reverb').onclick = function() {
     activeFilters.reverb = !activeFilters.reverb;
-    reverb.wet.rampTo(activeFilters.reverb ? 0.45 : 0, 0.4);
+    reverb.wet.rampTo(activeFilters.reverb ? 0.5 : 0, 0.4);
     this.classList.toggle('active-filter');
 };
-// ... (voeg de andere filters op dezelfde manier toe)
+
+beatUpload.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) beat = new Tone.Player(URL.createObjectURL(file)).toDestination();
+};
