@@ -26,25 +26,17 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1);
         }
-
-        myWebView = (WebView) findViewById(R.id.webview);
-        WebSettings webSettings = myWebView.getSettings();
-        webSettings.setJavaScriptEnabled(true);
-        webSettings.setDomStorageEnabled(true);
-        webSettings.setMediaPlaybackRequiresUserGesture(false);
-
-        myWebView.setWebViewClient(new WebViewClient());
-
-        // De oplossing voor de hardware-blokkade
-        myWebView.setWebChromeClient(new WebChromeClient() {
+myWebView.setWebChromeClient(new WebChromeClient() {
+    @Override
+    public void onPermissionRequest(final PermissionRequest request) {
+        // Dit zorgt ervoor dat de WebView de rechten daadwerkelijk accepteert
+        MainActivity.this.runOnUiThread(new Runnable() {
             @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                MainActivity.this.runOnUiThread(() -> {
-                    request.grant(request.getResources());
-                });
+            public void run() {
+                request.grant(request.getResources());
             }
         });
-
-        myWebView.loadUrl("https://abelsoftware1233.github.io");
     }
-}
+});
+
+        
