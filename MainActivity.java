@@ -1,4 +1,4 @@
-package com.jouw.appnaam; // Zorg dat dit overeenkomt met jouw project!
+package com.ai.studio; // Zorg dat dit overeenkomt met jouw project!
 
 import android.Manifest;
 import android.content.pm.PackageManager;
