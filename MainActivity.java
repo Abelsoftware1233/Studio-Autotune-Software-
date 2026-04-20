@@ -1,4 +1,4 @@
-package com.jouw.appnaam;
+package com.ai.studio;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
